@@ -1,9 +1,10 @@
 name: 每日股票分析
 
 on:
-  # 定时触发 - 美股收盘后（UTC 21:30）
+  # 定时触发 - 美股收盘后全量分析（UTC 21:30）+ A股收盘后大盘复盘（UTC 7:30）
   schedule:
     - cron: '30 21 * * 1-5'     # 周一到周五，UTC 21:30 = 美东冬令时 16:30 / 夏令时 17:30（收盘后）
+    - cron: '30 7 * * 1-5'      # 周一到周五，UTC 7:30 = 北京时间 15:30（A股收盘后），仅做 A股大盘复盘
   
   # 手动触发
   workflow_dispatch:
@@ -435,7 +436,7 @@ jobs:
           # ==========================================
           # 避免直接写入 STOCK_LIST，保留同名 Environment variables 的 runner 环境值。
           STOCK_LIST_CONFIG: ${{ vars.STOCK_LIST || secrets.STOCK_LIST }}
-          MARKET_REVIEW_REGION: ${{ vars.MARKET_REVIEW_REGION || secrets.MARKET_REVIEW_REGION || 'cn' }}
+          MARKET_REVIEW_REGION: ${{ (github.event.schedule == '30 7 * * 1-5' && 'cn') || vars.MARKET_REVIEW_REGION || secrets.MARKET_REVIEW_REGION || 'cn' }}
           MARKET_REVIEW_COLOR_SCHEME: ${{ vars.MARKET_REVIEW_COLOR_SCHEME || secrets.MARKET_REVIEW_COLOR_SCHEME || 'green_up' }}
           
           # ==========================================
@@ -484,7 +485,7 @@ jobs:
           fi
 
           # 判断运行模式
-          MODE="${{ github.event.inputs.mode || 'full' }}"
+          MODE="${{ github.event.inputs.mode || (github.event.schedule == '30 7 * * 1-5' && 'market-only') || 'full' }}"
           
           echo "=========================================="
           echo "🚀 A股自选股智能分析系统"
